@@ -225,7 +225,7 @@ func (as *apiService) KlineWebsocket(kwr KlineWebsocketRequest) (chan *KlineEven
 	return kech, done, nil
 }
 
-func (as *apiService) TradeWebsocket(twr TradeWebsocketRequest) (chan *AggTradeEvent, chan struct{}, error) {
+func (as *apiService) AggTradeWebsocket(twr AggTradeWebsocketRequest) (chan *AggTradeEvent, chan struct{}, error) {
 	url := fmt.Sprintf("wss://stream.binance.com:9443/ws/%s@aggTrade", strings.ToLower(twr.Symbol))
 	c, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
@@ -309,6 +309,82 @@ func (as *apiService) TradeWebsocket(twr TradeWebsocketRequest) (chan *AggTradeE
 	}()
 
 	go as.exitHandler(c, done)
+	return aggtech, done, nil
+}
+
+func (as *apiService) TradeWebsocket(twr TradeWebsocketRequest) (chan *TradeEvent, chan struct{}, error) {
+	url := fmt.Sprintf("wss://stream.binance.com:9443/ws/%s@trade", strings.ToLower(twr.Symbol))
+	c, _, err := websocket.DefaultDialer.Dial(url, nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+	}
+
+	done := make(chan struct{})
+	aggtech := make(chan *TradeEvent)
+
+	go func() {
+		defer c.Close()
+		defer close(done)
+		for {
+			select {
+			case <-as.Ctx.Done():
+				level.Info(as.Logger).Log("closing reader")
+				return
+			default:
+				_, message, err := c.ReadMessage()
+				if err != nil {
+					level.Error(as.Logger).Log("wsRead", err)
+					return
+				}
+				rawTrade := struct {
+					Type          string  `json:"e"`
+					EventTime     uint64  `json:"E"`
+					Symbol        string  `json:"s"`
+					TradeID       uint64  `json:"t"`
+					Price         float64 `json:"p,string"`
+					Quantity      float64 `json:"q,string"`
+					BuyerId       uint64  `json:"b"`
+					SellerId      uint64  `json:"a"`
+					TradeTime     uint64  `json:"T"`
+					IsMarketMaker bool    `json:"m"`
+				}{}
+				if err := json.Unmarshal(message, &rawTrade); err != nil {
+					level.Error(as.Logger).Log("wsUnmarshal", err, "body", string(message))
+					return
+				}
+				eventTime, err := timeFromUnixTimestampString(fmt.Sprintf("%d", rawTrade.EventTime))
+				if err != nil {
+					level.Error(as.Logger).Log("wsUnmarshal", err, "body", rawTrade.EventTime)
+					return
+				}
+				tradeTime, err := timeFromUnixTimestampString(fmt.Sprintf("%d", rawTrade.TradeTime))
+				if err != nil {
+					level.Error(as.Logger).Log("wsUnmarshal", err, "body", rawTrade.TradeTime)
+					return
+				}
+
+				ae := &TradeEvent{
+					WSEvent: WSEvent{
+						Type:   rawTrade.Type,
+						Time:   eventTime,
+						Symbol: rawTrade.Symbol,
+					},
+					Trade: Trade{
+						ID:         rawTrade.TradeID,
+						Price:      rawTrade.Price,
+						Quantity:   rawTrade.Quantity,
+						BuyerId:    rawTrade.BuyerId,
+						SellerId:   rawTrade.SellerId,
+						TradeTime:  tradeTime,
+						BuyerMaker: rawTrade.IsMarketMaker,
+					},
+				}
+				aggtech <- ae
+			}
+		}
+	}()
+
+	//	go as.exitHandler(c, done)
 	return aggtech, done, nil
 }
 
@@ -412,11 +488,12 @@ func (as *apiService) exitHandler(c *websocket.Conn, done chan struct{}) {
 	for {
 		select {
 		case t := <-ticker.C:
-			err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
-			if err != nil {
-				level.Error(as.Logger).Log("wsWrite", err)
-				return
-			}
+			//			err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
+			//			if err != nil {
+			//				level.Error(as.Logger).Log("wsWrite", err)
+			//				return
+			//			}
+			level.Info(as.Logger).Log(t)
 		case <-as.Ctx.Done():
 			select {
 			case <-done:

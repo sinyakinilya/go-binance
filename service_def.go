@@ -33,7 +33,7 @@ type Service interface {
 	AllOrders(aor AllOrdersRequest) ([]*ExecutedOrder, error)
 
 	Account(ar AccountRequest) (*Account, error)
-	MyTrades(mtr MyTradesRequest) ([]*Trade, error)
+	MyTrades(mtr MyTradesRequest) ([]*MyTrade, error)
 	Withdraw(wr WithdrawRequest) (*WithdrawResult, error)
 	DepositHistory(hr HistoryRequest) ([]*Deposit, error)
 	WithdrawHistory(hr HistoryRequest) ([]*Withdrawal, error)
@@ -44,7 +44,8 @@ type Service interface {
 
 	DepthWebsocket(dwr DepthWebsocketRequest) (chan *DepthEvent, chan struct{}, error)
 	KlineWebsocket(kwr KlineWebsocketRequest) (chan *KlineEvent, chan struct{}, error)
-	TradeWebsocket(twr TradeWebsocketRequest) (chan *AggTradeEvent, chan struct{}, error)
+	AggTradeWebsocket(twr AggTradeWebsocketRequest) (chan *AggTradeEvent, chan struct{}, error)
+	TradeWebsocket(twr TradeWebsocketRequest) (chan *TradeEvent, chan struct{}, error)
 	UserDataWebsocket(udwr UserDataWebsocketRequest) (chan *AccountEvent, chan struct{}, error)
 }
 

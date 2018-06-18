@@ -355,7 +355,7 @@ func (as *apiService) Account(ar AccountRequest) (*Account, error) {
 	return acc, nil
 }
 
-func (as *apiService) MyTrades(mtr MyTradesRequest) ([]*Trade, error) {
+func (as *apiService) MyTrades(mtr MyTradesRequest) ([]*MyTrade, error) {
 	params := make(map[string]string)
 	params["symbol"] = mtr.Symbol
 	params["timestamp"] = strconv.FormatInt(unixMillis(mtr.Timestamp), 10)
@@ -398,7 +398,7 @@ func (as *apiService) MyTrades(mtr MyTradesRequest) ([]*Trade, error) {
 		return nil, errors.Wrap(err, "rawTrades unmarshal failed")
 	}
 
-	var tc []*Trade
+	var tc []*MyTrade
 	for _, rt := range rawTrades {
 		price, err := floatFromString(rt.Price)
 		if err != nil {
@@ -416,7 +416,7 @@ func (as *apiService) MyTrades(mtr MyTradesRequest) ([]*Trade, error) {
 		if err != nil {
 			return nil, err
 		}
-		tc = append(tc, &Trade{
+		tc = append(tc, &MyTrade{
 			ID:              rt.ID,
 			Price:           price,
 			Qty:             qty,

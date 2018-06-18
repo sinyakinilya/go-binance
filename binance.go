@@ -47,7 +47,7 @@ type Binance interface {
 	// Account returns account data.
 	Account(ar AccountRequest) (*Account, error)
 	// MyTrades list user's trades.
-	MyTrades(mtr MyTradesRequest) ([]*Trade, error)
+	MyTrades(mtr MyTradesRequest) ([]*MyTrade, error)
 	// Withdraw executes withdrawal.
 	Withdraw(wr WithdrawRequest) (*WithdrawResult, error)
 	// DepositHistory lists deposit data.
@@ -64,7 +64,8 @@ type Binance interface {
 
 	DepthWebsocket(dwr DepthWebsocketRequest) (chan *DepthEvent, chan struct{}, error)
 	KlineWebsocket(kwr KlineWebsocketRequest) (chan *KlineEvent, chan struct{}, error)
-	TradeWebsocket(twr TradeWebsocketRequest) (chan *AggTradeEvent, chan struct{}, error)
+	AggTradeWebsocket(twr AggTradeWebsocketRequest) (chan *AggTradeEvent, chan struct{}, error)
+	TradeWebsocket(twr TradeWebsocketRequest) (chan *TradeEvent, chan struct{}, error)
 	UserDataWebsocket(udwr UserDataWebsocketRequest) (chan *AccountEvent, chan struct{}, error)
 }
 
@@ -159,6 +160,32 @@ type AggTradesRequest struct {
 // AggTrades returns compressed/aggregate list of trades.
 func (b *binance) AggTrades(atr AggTradesRequest) ([]*AggTrade, error) {
 	return b.Service.AggTrades(atr)
+}
+
+// AggTrade represents aggregated trade.
+type Trade struct {
+	ID             uint64
+	Price          float64
+	Quantity       float64
+	BuyerId        uint64
+	SellerId       uint64
+	TradeTime      time.Time
+	BuyerMaker     bool
+	BestPriceMatch bool
+}
+
+type TradeEvent struct {
+	WSEvent
+	Trade
+}
+
+// TradesRequest represents AggTrades request data.
+type TradesRequest struct {
+	Symbol    string
+	FromID    int64
+	StartTime int64
+	EndTime   int64
+	Limit     int
 }
 
 // KlinesRequest represents Klines request data.
@@ -411,7 +438,7 @@ type MyTradesRequest struct {
 }
 
 // Trade represents data about trade.
-type Trade struct {
+type MyTrade struct {
 	ID              int64
 	Price           float64
 	Qty             float64
@@ -424,7 +451,7 @@ type Trade struct {
 }
 
 // MyTrades list user's trades.
-func (b *binance) MyTrades(mtr MyTradesRequest) ([]*Trade, error) {
+func (b *binance) MyTrades(mtr MyTradesRequest) ([]*MyTrade, error) {
 	return b.Service.MyTrades(mtr)
 }
 
@@ -532,11 +559,19 @@ func (b *binance) KlineWebsocket(kwr KlineWebsocketRequest) (chan *KlineEvent, c
 	return b.Service.KlineWebsocket(kwr)
 }
 
+type AggTradeWebsocketRequest struct {
+	Symbol string
+}
+
+func (b *binance) AggTradeWebsocket(twr AggTradeWebsocketRequest) (chan *AggTradeEvent, chan struct{}, error) {
+	return b.Service.AggTradeWebsocket(twr)
+}
+
 type TradeWebsocketRequest struct {
 	Symbol string
 }
 
-func (b *binance) TradeWebsocket(twr TradeWebsocketRequest) (chan *AggTradeEvent, chan struct{}, error) {
+func (b *binance) TradeWebsocket(twr TradeWebsocketRequest) (chan *TradeEvent, chan struct{}, error) {
 	return b.Service.TradeWebsocket(twr)
 }
 
