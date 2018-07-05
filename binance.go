@@ -162,7 +162,6 @@ func (b *binance) AggTrades(atr AggTradesRequest) ([]*AggTrade, error) {
 	return b.Service.AggTrades(atr)
 }
 
-// AggTrade represents aggregated trade.
 type Trade struct {
 	ID             uint64
 	Price          float64
@@ -172,6 +171,19 @@ type Trade struct {
 	TradeTime      time.Time
 	BuyerMaker     bool
 	BestPriceMatch bool
+}
+
+type TradeEventResponse struct {
+	Type          string  `json:"e"`
+	EventTime     int64   `json:"E"`
+	Symbol        string  `json:"s"`
+	TradeID       uint64  `json:"t"`
+	Price         float64 `json:"p,string"`
+	Quantity      float64 `json:"q,string"`
+	BuyerId       uint64  `json:"b"`
+	SellerId      uint64  `json:"a"`
+	TradeTime     int64   `json:"T"`
+	IsMarketMaker bool    `json:"m"`
 }
 
 type TradeEvent struct {
@@ -416,11 +428,58 @@ type AccountEvent struct {
 	Account
 }
 
+type OutboundAccountInfoEvent struct {
+	Type              string     `json:"e"`
+	EventTime         int64      `json:"E"`
+	MakerCommision    int64      `json:"m"`
+	TakerCommision    int64      `json:"t"`
+	BuyerCommision    int64      `json:"b"`
+	SellerCommision   int64      `json:"s"`
+	CanTrade          bool       `json:"T"`
+	CanWithdraw       bool       `json:"W"`
+	CanDeposit        bool       `json:"D"`
+	TimeAccountUpdate int64      `json:"u"`
+	Balances          []*Balance `json:"B"`
+}
+
+type ExecutionReportEvent struct {
+	Type                     string  `json:"e"`        //"e": "executionReport",
+	EventTime                int64   `json:"E"`        //"E": 1530729058977,
+	Symbol                   string  `json:"s"`        // "s": "ETHBTC",
+	ClientOrderId            string  `json:"c"`        //"c": "web_531ccfa966a341cdac2f336beda70efb",
+	Side                     string  `json:"S"`        //"S": "BUY",
+	OrderType                string  `json:"o"`        //"o": "LIMIT",
+	TimeInForce              string  `json:"f"`        //"f": "GTC",
+	Quantity                 float64 `json:"q,string"` //"q": "0.05200000",
+	Price                    float64 `json:"p,string"` //"p": "0.07095000",
+	StopPrice                float64 `json:"P,string"` //"P": "0.00000000",
+	IcebergQty               float64 `json:"F,string"` //"F": "0.00000000",
+	OriginalClientOrderID    string  `json:"C"`        //"C": "null",
+	CurrentExecutionType     string  `json:"x"`        //"x": "NEW",
+	CurrentOrderStatus       string  `json:"X"`        //"X": "NEW",
+	OrderRejectReason        string  `json:"r"`        //"r": "NONE",
+	OrderId                  int64   `json:"i"`        //"i": 175728136,
+	LastExecutedQuantity     float64 `json:"l,string"` //"l": "0.00000000",
+	CumulativeFilledQuantity float64 `json:"z,string"` //"z": "0.00000000",
+	LastExecutedPrice        float64 `json:"L,string"` //"L": "0.00000000",
+	CommissionAmount         int64   `json:"n,string"` //"n": "0",
+	CommissionAsset          bool    `json:"N"`        //"N": null,
+	TransactionTime          int64   `json:"T"`        //"T": 1530729058976,
+	TradeId                  int64   `json:"t"`        //"t": -1,
+	w                        bool    `json:"w"`        //"w": true,
+	m                        bool    `json:"m"`        //"m": false,
+	M                        bool    `json:"M"`        //"M": false,
+	O                        int64   `json:"O"`        //"O": 1530729058976,
+	Z                        float64 `json:"Z,string"` //"Z": "0.00000000",
+	//"g": -1,         - ignored
+	//"I": 421966584,  - ignored
+}
+
 // Balance groups balance-related information.
 type Balance struct {
-	Asset  string
-	Free   float64
-	Locked float64
+	Asset  string  `json:"a"`
+	Free   float64 `json:"f,string"`
+	Locked float64 `json:"l,string"`
 }
 
 // Account returns account data.

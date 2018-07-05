@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/binance-exchange/go-binance"
+	"github.com/sinyakinilya/go-binance"
 )
 
 func main() {

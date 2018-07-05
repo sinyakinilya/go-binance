@@ -336,37 +336,17 @@ func (as *apiService) TradeWebsocket(twr TradeWebsocketRequest) (chan *TradeEven
 					level.Error(as.Logger).Log("wsRead", err)
 					return
 				}
-				rawTrade := struct {
-					Type          string  `json:"e"`
-					EventTime     uint64  `json:"E"`
-					Symbol        string  `json:"s"`
-					TradeID       uint64  `json:"t"`
-					Price         float64 `json:"p,string"`
-					Quantity      float64 `json:"q,string"`
-					BuyerId       uint64  `json:"b"`
-					SellerId      uint64  `json:"a"`
-					TradeTime     uint64  `json:"T"`
-					IsMarketMaker bool    `json:"m"`
-				}{}
+
+				var rawTrade TradeEventResponse
 				if err := json.Unmarshal(message, &rawTrade); err != nil {
 					level.Error(as.Logger).Log("wsUnmarshal", err, "body", string(message))
 					return
 				}
-				eventTime, err := timeFromUnixTimestampString(fmt.Sprintf("%d", rawTrade.EventTime))
-				if err != nil {
-					level.Error(as.Logger).Log("wsUnmarshal", err, "body", rawTrade.EventTime)
-					return
-				}
-				tradeTime, err := timeFromUnixTimestampString(fmt.Sprintf("%d", rawTrade.TradeTime))
-				if err != nil {
-					level.Error(as.Logger).Log("wsUnmarshal", err, "body", rawTrade.TradeTime)
-					return
-				}
 
-				ae := &TradeEvent{
+				aggtech <- &TradeEvent{
 					WSEvent: WSEvent{
 						Type:   rawTrade.Type,
-						Time:   eventTime,
+						Time:   time.Unix(0, rawTrade.EventTime*int64(time.Millisecond)),
 						Symbol: rawTrade.Symbol,
 					},
 					Trade: Trade{
@@ -375,16 +355,15 @@ func (as *apiService) TradeWebsocket(twr TradeWebsocketRequest) (chan *TradeEven
 						Quantity:   rawTrade.Quantity,
 						BuyerId:    rawTrade.BuyerId,
 						SellerId:   rawTrade.SellerId,
-						TradeTime:  tradeTime,
+						TradeTime:  time.Unix(0, rawTrade.TradeTime*int64(time.Millisecond)),
 						BuyerMaker: rawTrade.IsMarketMaker,
 					},
 				}
-				aggtech <- ae
 			}
 		}
 	}()
 
-	//	go as.exitHandler(c, done)
+	go as.exitHandler(c, done)
 	return aggtech, done, nil
 }
 
@@ -412,66 +391,49 @@ func (as *apiService) UserDataWebsocket(urwr UserDataWebsocketRequest) (chan *Ac
 					level.Error(as.Logger).Log("wsRead", err)
 					return
 				}
-				rawAccount := struct {
-					Type            string  `json:"e"`
-					Time            float64 `json:"E"`
-					OpenTime        float64 `json:"t"`
-					MakerCommision  int64   `json:"m"`
-					TakerCommision  int64   `json:"t"`
-					BuyerCommision  int64   `json:"b"`
-					SellerCommision int64   `json:"s"`
-					CanTrade        bool    `json:"T"`
-					CanWithdraw     bool    `json:"W"`
-					CanDeposit      bool    `json:"D"`
-					Balances        []struct {
-						Asset            string `json:"a"`
-						AvailableBalance string `json:"f"`
-						Locked           string `json:"l"`
-					} `json:"B"`
+
+				rawType := struct {
+					Type string `json:"e"`
+					Time uint64 `json:"E"`
 				}{}
-				if err := json.Unmarshal(message, &rawAccount); err != nil {
+
+				if err := json.Unmarshal(message, &rawType); err != nil {
 					level.Error(as.Logger).Log("wsUnmarshal", err, "body", string(message))
 					return
 				}
-				t, err := timeFromUnixTimestampFloat(rawAccount.Time)
-				if err != nil {
-					level.Error(as.Logger).Log("wsUnmarshal", err, "body", rawAccount.Time)
-					return
-				}
+				switch rawType.Type {
+				case "outboundAccountInfo":
+					var rawAccount OutboundAccountInfoEvent
+					if err := json.Unmarshal(message, &rawAccount); err != nil {
+						level.Error(as.Logger).Log("wsUnmarshal", err, "body", string(message))
+						return
+					}
 
-				ae := &AccountEvent{
-					WSEvent: WSEvent{
-						Type: rawAccount.Type,
-						Time: t,
-					},
-					Account: Account{
-						MakerCommision:  rawAccount.MakerCommision,
-						TakerCommision:  rawAccount.TakerCommision,
-						BuyerCommision:  rawAccount.BuyerCommision,
-						SellerCommision: rawAccount.SellerCommision,
-						CanTrade:        rawAccount.CanTrade,
-						CanWithdraw:     rawAccount.CanWithdraw,
-						CanDeposit:      rawAccount.CanDeposit,
-					},
-				}
-				for _, b := range rawAccount.Balances {
-					free, err := floatFromString(b.AvailableBalance)
-					if err != nil {
-						level.Error(as.Logger).Log("wsUnmarshal", err, "body", b.AvailableBalance)
+					aech <- &AccountEvent{
+						WSEvent: WSEvent{
+							Type: rawAccount.Type,
+							Time: time.Unix(0, rawAccount.EventTime*int64(time.Millisecond)),
+						},
+						Account: Account{
+							MakerCommision:  rawAccount.MakerCommision,
+							TakerCommision:  rawAccount.TakerCommision,
+							BuyerCommision:  rawAccount.BuyerCommision,
+							SellerCommision: rawAccount.SellerCommision,
+							CanTrade:        rawAccount.CanTrade,
+							CanWithdraw:     rawAccount.CanWithdraw,
+							CanDeposit:      rawAccount.CanDeposit,
+							Balances:        rawAccount.Balances,
+						},
+					}
+
+				case "executionReport":
+					var executionReport ExecutionReportEvent
+					if err := json.Unmarshal(message, &executionReport); err != nil {
+						level.Error(as.Logger).Log("wsUnmarshal", err, "body", string(message))
 						return
 					}
-					locked, err := floatFromString(b.Locked)
-					if err != nil {
-						level.Error(as.Logger).Log("wsUnmarshal", err, "body", b.Locked)
-						return
-					}
-					ae.Balances = append(ae.Balances, &Balance{
-						Asset:  b.Asset,
-						Free:   free,
-						Locked: locked,
-					})
+					level.Info(as.Logger).Log("executionReport", executionReport)
 				}
-				aech <- ae
 			}
 		}
 	}()
@@ -488,11 +450,11 @@ func (as *apiService) exitHandler(c *websocket.Conn, done chan struct{}) {
 	for {
 		select {
 		case t := <-ticker.C:
-			//			err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
-			//			if err != nil {
-			//				level.Error(as.Logger).Log("wsWrite", err)
-			//				return
-			//			}
+			err := c.WriteMessage(websocket.PingMessage, []byte{})
+			if err != nil {
+				level.Error(as.Logger).Log("wsWrite", err)
+				return
+			}
 			level.Info(as.Logger).Log(t)
 		case <-as.Ctx.Done():
 			select {
