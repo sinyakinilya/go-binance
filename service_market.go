@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"strings"
 )
 
 func (as *apiService) Ping() error {
@@ -175,6 +176,39 @@ func (as *apiService) AggTrades(atr AggTradesRequest) ([]*AggTrade, error) {
 		})
 	}
 	return aggTrades, nil
+}
+
+func (as *apiService) HistoricalTrades(htr HistoricalTradesRequest) (ht []*HistoricalTrades, err error) {
+	params := make(map[string]string)
+	params["symbol"] = strings.ToUpper(htr.Symbol)
+	if htr.FromId >= 0 {
+		params["fromId"] = strconv.FormatInt(htr.FromId, 10)
+	}
+	if htr.Limit >= 0 && htr.Limit <= 500 {
+		params["limit"] = strconv.Itoa(htr.Limit)
+	}
+
+	res, err := as.request("GET", "api/v1/historicalTrades", params, true, false)
+	if err != nil {
+		return ht, err
+	}
+	textRes, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return ht, errors.Wrap(err, "unable to read response from AggTrades")
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		as.handleError(textRes)
+	}
+
+	//	historyTrades := new([]*HistoricalTrades)
+
+	if err := json.Unmarshal(textRes, &ht); err != nil {
+		return nil, errors.Wrap(err, "historyTrades unmarshal failed")
+	}
+
+	return ht, nil
 }
 
 func (as *apiService) Klines(kr KlinesRequest) ([]*Kline, error) {

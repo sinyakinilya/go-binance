@@ -449,13 +449,13 @@ func (as *apiService) exitHandler(c *websocket.Conn, done chan struct{}) {
 
 	for {
 		select {
-		case t := <-ticker.C:
+		case <-ticker.C:
 			err := c.WriteMessage(websocket.PingMessage, []byte{})
 			if err != nil {
 				level.Error(as.Logger).Log("wsWrite", err)
 				return
 			}
-			level.Info(as.Logger).Log(t)
+//			level.Info(as.Logger).Log(t)
 		case <-as.Ctx.Done():
 			select {
 			case <-done:

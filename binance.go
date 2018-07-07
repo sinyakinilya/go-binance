@@ -22,6 +22,8 @@ type Binance interface {
 	OrderBook(obr OrderBookRequest) (*OrderBook, error)
 	// AggTrades returns compressed/aggregate list of trades.
 	AggTrades(atr AggTradesRequest) ([]*AggTrade, error)
+
+	HistoricalTrades(htr HistoricalTradesRequest) ([]*HistoricalTrades, error)
 	// Klines returns klines/candlestick data.
 	Klines(kr KlinesRequest) ([]*Kline, error)
 	// Ticker24 returns 24hr price change statistics.
@@ -160,6 +162,26 @@ type AggTradesRequest struct {
 // AggTrades returns compressed/aggregate list of trades.
 func (b *binance) AggTrades(atr AggTradesRequest) ([]*AggTrade, error) {
 	return b.Service.AggTrades(atr)
+}
+
+type HistoricalTradesRequest struct {
+	Symbol string
+	Limit  int
+	FromId int64
+}
+
+type HistoricalTrades struct {
+	TradeId    uint64  `json:"id"`
+	Price      float64 `json:"price,string"`
+	Quantity   float64 `json:"qty,string"`
+	TradeTime  uint64  `json:"time"`
+	BuyerMaker bool    `json:"isBuyerMaker"`
+	BestMatch  bool    `json:"isBestMatch"`
+}
+
+// AggTrades returns compressed/aggregate list of trades.
+func (b *binance) HistoricalTrades(htr HistoricalTradesRequest) ([]*HistoricalTrades, error) {
+	return b.Service.HistoricalTrades(htr)
 }
 
 type Trade struct {
@@ -462,8 +484,8 @@ type ExecutionReportEvent struct {
 	LastExecutedQuantity     float64 `json:"l,string"` //"l": "0.00000000",
 	CumulativeFilledQuantity float64 `json:"z,string"` //"z": "0.00000000",
 	LastExecutedPrice        float64 `json:"L,string"` //"L": "0.00000000",
-	CommissionAmount         int64   `json:"n,string"` //"n": "0",
-	CommissionAsset          bool    `json:"N"`        //"N": null,
+	CommissionAmount         float64 `json:"n,string"` //"n": "0",
+	CommissionAsset          string  `json:"N"`        //"N": null,
 	TransactionTime          int64   `json:"T"`        //"T": 1530729058976,
 	TradeId                  int64   `json:"t"`        //"t": -1,
 	w                        bool    `json:"w"`        //"w": true,
