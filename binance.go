@@ -23,6 +23,8 @@ type Binance interface {
 	// AggTrades returns compressed/aggregate list of trades.
 	AggTrades(atr AggTradesRequest) ([]*AggTrade, error)
 
+	ExchangeInfo() (*ExchangeInfo, error)
+
 	HistoricalTrades(htr HistoricalTradesRequest) ([]*HistoricalTrades, error)
 	// Klines returns klines/candlestick data.
 	Klines(kr KlinesRequest) ([]*Kline, error)
@@ -182,6 +184,40 @@ type HistoricalTrades struct {
 // AggTrades returns compressed/aggregate list of trades.
 func (b *binance) HistoricalTrades(htr HistoricalTradesRequest) ([]*HistoricalTrades, error) {
 	return b.Service.HistoricalTrades(htr)
+}
+
+type Symbol struct {
+	Asset              string   `json:"symbol"`
+	Status             string   `json:"status"`
+	BaseAsset          string   `json:"baseAsset"`
+	BaseAssetPrecision int8     `json:"baseAssetPrecision"`
+	QuoteAsset         string   `json:"quoteAsset"`
+	QuotePrecision     int8     `json:"QuotePrecision"`
+	OrderTypes         []string `json:"orderTypes"`
+	IcebergAllowed     bool     `json:"icebergAllowed"`
+	Filters            []struct {
+		FilterType  string  `json:"filterType"`
+		MinPrice    float64 `json:"minPrice,string,omitempty"`
+		MaxPrice    float64 `json:"MaxPrice,string,omitempty"`
+		StepSize    float64 `json:"StepSize,string,omitempty"`
+		MinNotional float64 `json:"minNotional,string,omitempty"`
+	}
+}
+
+type ExchangeInfo struct {
+	TimeZone   string `json:"timezone"`
+	ServerTime uint   `json:"serverTime"`
+	RateLimits []struct {
+		RateLimitType string `json:"rateLimitType"`
+		Interval      string `json:"interval"`
+		Limit         int    `json:"limit"`
+	} `json:"rateLimits"`
+	ExchangeFilters []interface{} `json:"exchangeFilters"`
+	Symbols         []Symbol      `json:"symbols"`
+}
+
+func (b *binance) ExchangeInfo() (*ExchangeInfo, error) {
+	return b.Service.ExchangeInfo()
 }
 
 type Trade struct {

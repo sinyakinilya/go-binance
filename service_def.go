@@ -21,6 +21,8 @@ type Service interface {
 	OrderBook(obr OrderBookRequest) (*OrderBook, error)
 	AggTrades(atr AggTradesRequest) ([]*AggTrade, error)
 	HistoricalTrades(htr HistoricalTradesRequest) ([]*HistoricalTrades, error)
+	ExchangeInfo() (*ExchangeInfo, error)
+
 	Klines(kr KlinesRequest) ([]*Kline, error)
 	Ticker24(tr TickerRequest) (*Ticker24, error)
 	TickerAllPrices() ([]*PriceTicker, error)

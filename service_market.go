@@ -178,6 +178,31 @@ func (as *apiService) AggTrades(atr AggTradesRequest) ([]*AggTrade, error) {
 	return aggTrades, nil
 }
 
+func (as *apiService) ExchangeInfo() (*ExchangeInfo, error) {
+	params := make(map[string]string)
+
+	res, err := as.request("GET", "api/v1/exchangeInfo", params, false, false)
+	if err != nil {
+		return nil, err
+	}
+	textRes, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to read response from AggTrades")
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		as.handleError(textRes)
+	}
+
+	var exchangeInfo ExchangeInfo
+	if err := json.Unmarshal(textRes, &exchangeInfo); err != nil {
+		return nil, errors.Wrap(err, "exchangeInfo unmarshal failed")
+	}
+
+	return &exchangeInfo, nil
+}
+
 func (as *apiService) HistoricalTrades(htr HistoricalTradesRequest) (ht []*HistoricalTrades, err error) {
 	params := make(map[string]string)
 	params["symbol"] = strings.ToUpper(htr.Symbol)
