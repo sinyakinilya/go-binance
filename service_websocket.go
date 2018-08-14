@@ -76,6 +76,22 @@ func (as *apiService) DepthWebsocket(dwr DepthWebsocketRequest) (chan *DepthEven
 						Quantity: q,
 					})
 				}
+				for _, b := range rawDepth.AskDepthDelta {
+					p, err := floatFromString(b[0])
+					if err != nil {
+						level.Error(as.Logger).Log("wsUnmarshal", err, "body", string(message))
+						return
+					}
+					q, err := floatFromString(b[1])
+					if err != nil {
+						level.Error(as.Logger).Log("wsUnmarshal", err, "body", string(message))
+						return
+					}
+					de.Asks = append(de.Asks, &Order{
+						Price:    p,
+						Quantity: q,
+					})
+				}
 				dech <- de
 			}
 		}
@@ -455,7 +471,7 @@ func (as *apiService) exitHandler(c *websocket.Conn, done chan struct{}) {
 				level.Error(as.Logger).Log("wsWrite", err)
 				return
 			}
-//			level.Info(as.Logger).Log(t)
+			//			level.Info(as.Logger).Log(t)
 		case <-as.Ctx.Done():
 			select {
 			case <-done:
